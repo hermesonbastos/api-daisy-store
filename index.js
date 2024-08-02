@@ -4,7 +4,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const app = express();
 
-
+require('dotenv').config();
 
 app.use(express.json());
 
@@ -19,6 +19,32 @@ app.post('/users', async (req, res) => {
     data: { name, email }
   });
   res.json(admin);
+});
+
+app.get('/categories', async (req, res) => {
+  const category = await prisma.category.findMany();
+  res.json(category);
+});
+
+app.post('/categories', async (req, res) => {
+  const { name, description } = req.body;
+  const category = await prisma.category.create({
+    data: { name, description }
+  });
+  res.json(category);
+});
+
+app.get('/products', async (req, res) => {
+  const product = await prisma.product.findMany();
+  res.json(product);
+});
+
+app.post('/products', async (req, res) => {
+  const { name, description, price, stock } = req.body;
+  const product = await prisma.product.create({
+    data: { name, description, price, stock }
+  });
+  res.json(product);
 });
 
 const PORT = process.env.PORT || 3000;

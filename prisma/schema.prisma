@@ -15,3 +15,15 @@ model Admin {
   name  String
   email String  @unique
 }
+model Category {
+  id          Int     @id @default(autoincrement())
+  name        String
+  description String?
+}
+model Product{
+  id          Int     @id @default(autoincrement())
+  name        String
+  description String
+  price       Float 
+  stock       Int
+}
