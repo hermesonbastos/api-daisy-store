@@ -6,7 +6,10 @@ const getAllCategories = async () => {
 
 const createCategory = async (data) => {
   return await prisma.category.create({
-    data,
+    data: {
+      name: data.name,
+      description: data.description
+    }
   });
 }
 

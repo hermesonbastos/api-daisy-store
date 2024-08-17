@@ -24,7 +24,6 @@ const createProduct = async (data) => {
   });
 };
 
-
 const updateProduct = async (data) => {
   return await prisma.product.update({
     where: {
@@ -35,9 +34,20 @@ const updateProduct = async (data) => {
       description: data.description,
       price: data.price,
       stock: data.stock,
-    }
-  })
-}
+      categories: {
+        deleteMany: {},
+        create: data.categories.map((categoryId) => ({
+          category: { connect: { id: categoryId } },
+          assignedBy: "system",
+        })),
+      },
+    },
+    include: {
+      categories: true,
+    },
+  });
+};
+
 
 const deleteProduct = async (data) => {
   return await prisma.product.delete({
