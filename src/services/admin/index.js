@@ -12,7 +12,7 @@ const createAdmin = async (data) => {
 
 const updateAdmin = async (data) => {
   return await prisma.admin.update({
-    where: { id: data.id },
+    where: { id: Number(data.id) },
     data: {
       name: data.name,
       email: data.email
@@ -23,7 +23,7 @@ const updateAdmin = async (data) => {
 const deleteAdmin = async (data) => {
   return await prisma.admin.delete({
     where: {
-      id: data.id
+      id: Number(data.id)
     }
   })
 }

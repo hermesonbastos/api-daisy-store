@@ -11,21 +11,37 @@ datasource db {
 }
 
 model Admin {
-  id    Int     @id @default(autoincrement())
-  name  String
-  email String  @unique
+  id         Int      @id @default(autoincrement())
+  name       String
+  email      String   @unique
+  created_at DateTime @default(now())
 }
 
 model Category {
   id          Int     @id @default(autoincrement())
   name        String
   description String?
+  created_at  DateTime @default(now())
+  products    product_category[]
 }
 
-model Product{
-  id          Int     @id @default(autoincrement())
+model Product {
+  id          Int                 @id @default(autoincrement())
   name        String
   description String
-  price       Float 
+  price       Float
   stock       Int
+  created_at  DateTime @default(now())
+  categories  product_category[]
+}
+
+model product_category {
+  product    Product  @relation(fields: [productId], references: [id])
+  productId  Int
+  category   Category @relation(fields: [categoryId], references: [id])
+  categoryId Int
+  assignedAt DateTime @default(now())
+  assignedBy String
+
+  @@id([productId, categoryId])
 }

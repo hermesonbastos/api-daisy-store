@@ -6,14 +6,29 @@ const getAllProducts = async () => {
 
 const createProduct = async (data) => {
   return await prisma.product.create({
-    data,
+    data: {
+      name: data.name,
+      description: data.description,
+      price: data.price,
+      stock: data.stock,
+      categories: {
+        create: data.categories.map((categoryId) => ({
+          category: { connect: { id: categoryId } },
+          assignedBy: "system",
+        })),
+      },
+    },
+    include: {
+      categories: true,
+    },
   });
-}
+};
+
 
 const updateProduct = async (data) => {
   return await prisma.product.update({
     where: {
-      id: data.id,
+      id: Number(data.id),
     },
     data: {
       name: data.name,
@@ -27,7 +42,7 @@ const updateProduct = async (data) => {
 const deleteProduct = async (data) => {
   return await prisma.product.delete({
     where: {
-      id: data.id,
+      id: Number(data.id),
     }
   })
 }

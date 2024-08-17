@@ -13,7 +13,7 @@ const createCategory = async (data) => {
 const updateCategory = async (data) => {
   return await prisma.category.update({
     where: {
-      id: data.id,
+      id: Number(data.id),
     },
     data: {
       name: data.name,
@@ -25,7 +25,7 @@ const updateCategory = async (data) => {
 const deleteCategory = async (data) => {
   return await prisma.category.delete({
     where: {
-      id: data.id,
+      id: Number(data.id),
     }
   })
 }
