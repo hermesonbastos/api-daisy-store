@@ -26,13 +26,24 @@ model Category {
 }
 
 model Product {
-  id          Int                 @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   name        String
   description String
   price       Float
   stock       Int
   created_at  DateTime @default(now())
   categories  product_category[]
+  orders      product_order[]  
+}
+
+model Order {
+  id              Int      @id @default(autoincrement())
+  created_at      DateTime @default(now())
+  customer_phone  String
+  customer_email  String?
+  customer_name   String
+  status          String
+  products        product_order[]  
 }
 
 model product_category {
@@ -44,4 +55,15 @@ model product_category {
   assignedBy String
 
   @@id([productId, categoryId])
+}
+
+model product_order {
+  product    Product  @relation(fields: [productId], references: [id])
+  productId  Int
+  order   Order @relation(fields: [orderId], references: [id])
+  orderId Int
+  assignedAt DateTime @default(now())
+  assignedBy String
+
+  @@id([productId, orderId])
 }
