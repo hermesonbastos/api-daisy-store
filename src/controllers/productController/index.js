@@ -34,13 +34,14 @@ const createProduct = async (req, res) => {
 const updateProduct = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, description, price, stock } = req.body;
+        const { name, description, price, stock, categories } = req.body;
         const product = await productService.updateProduct({
             id,
             name,
             description,
             price,
             stock,
+            categories: categories || [],
         });
         res.json(product);
     } catch (error) {
