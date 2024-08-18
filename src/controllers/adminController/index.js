@@ -1,4 +1,7 @@
 const adminService = require("../../services/admin");
+const bcrypt = require("bcrypt");
+const { generateToken } = require("../../utils/jwt");
+const prisma = require("../../prisma");
 
 const getAdmins = async (req, res) => {
     try {
@@ -14,9 +17,26 @@ const getAdmins = async (req, res) => {
 
 const createAdmin = async (req, res) => {
     try {
-        const { name, email } = req.body;
-        const admin = await adminService.createAdmin({ name, email });
+        const { name, email, password } = req.body;
+
+        if(!name || !email || !password) {
+            return res.status(400).json({ error: "Name, email, and password are required." });
+        }
+
+        const existingAdmin = await adminService.findAdminByEmail(email);
+        if(existingAdmin) {
+            return res.status(400).json({ error: "Email is already in use." });
+        }
+
+        const hashedPassword = bcrypt.hashSync(password, 10);
+
+        const admin = await adminService.createAdmin({
+            name,
+            email,
+            password: hashedPassword,
+        });
         res.status(201).json(admin);
+
     } catch (error) {
         console.error("Error creating admin:", error.message);
         res.status(500).json({
@@ -24,6 +44,26 @@ const createAdmin = async (req, res) => {
         });
     }
 };
+
+const adminLogin = async (req, res) => {
+    const { email, password } = req.body;
+
+    try {
+        const admin = await prisma.admin.findUnique({
+            where: { email },
+        });
+
+        if(!admin || !bcrypt.compareSync(password, admin.password)) {
+            return res.status(400).json({ message: "Invalid email or password" });
+        };
+
+        const token = generateToken({ id: admin.id, email: admin.email });
+
+        res.json({ token });
+    } catch (error) {
+        res.status(500).json({ message: "Server error." })
+    }
+}
 
 const updateAdmin = async (req, res) => {
     try {
@@ -61,4 +101,5 @@ module.exports = {
     createAdmin,
     updateAdmin,
     deleteAdmin,
+    adminLogin,
 };
