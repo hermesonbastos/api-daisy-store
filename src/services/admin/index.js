@@ -28,9 +28,16 @@ const deleteAdmin = async (data) => {
   })
 }
 
+const findAdminByEmail = async (email) => {
+  return await prisma.admin.findUnique({
+    where: { email },
+  });
+};
+
 module.exports = {
   getAllAdmins,
   createAdmin,
   updateAdmin,
-  deleteAdmin
+  deleteAdmin,
+  findAdminByEmail,
 }
