@@ -15,13 +15,17 @@ const getProducts = async (req, res) => {
 const createProduct = async (req, res) => {
     try {
         const { name, description, price, stock, categories } = req.body;
+        const imagePath = req.file.path; // Supondo que você esteja usando um middleware como multer para uploads
+
         const product = await productService.createProduct({
             name,
             description,
             price,
             stock,
             categories: categories || [],
+            imagePath
         });
+
         res.status(201).json(product);
     } catch (error) {
         console.error("Error creating product:", error.message);
@@ -30,6 +34,7 @@ const createProduct = async (req, res) => {
         });
     }
 };
+
 
 const updateProduct = async (req, res) => {
     try {
