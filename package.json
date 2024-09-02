@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "nodemon index.js",
     "start": "node index.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest",
     "prisma:generate": "prisma generate --schema=src/prisma/schema.prisma",
     "prisma:migrate": "prisma migrate dev --schema=src/prisma/schema.prisma"
   },
@@ -13,18 +13,21 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "jest": "^29.7.0",
     "nodemon": "^3.1.4",
     "prisma": "^5.17.0"
   },
   "dependencies": {
     "@prisma/client": "^5.17.0",
+    "api-daisy-store": "file:",
     "bcrypt": "^5.1.1",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "fs": "^0.0.1-security",
     "googleapis": "^143.0.0",
     "jsonwebtoken": "^9.0.2",
-    "multer": "^1.4.5-lts.1"
+    "multer": "^1.4.5-lts.1",
+    "sqlite3": "^5.1.7"
   },
   "description": ""
 }
