@@ -1,74 +1,31 @@
-const fs = require('fs');
-const path = require('path');
 const { v4: uuidv4 } = require('uuid');
-const { google } = require('googleapis');
+const { ref, uploadBytes, getDownloadURL } = require('firebase/storage');
+const { storage } = require('../../utils/firebase');
 const productService = require("../../services/product");
-const apikeys = require('../../../apikey.json');
-const SCOPE = ["https://www.googleapis.com/auth/drive"];
-
-async function authorize() {
-    const jwtClient = new google.auth.JWT(
-        apikeys.client_email,
-        null,
-        apikeys.private_key,
-        SCOPE
-    );
-    await jwtClient.authorize();
-    return jwtClient;
-}
-
-async function uploadFile(authClient, filePath, fileName) {
-    return new Promise((resolve, reject) => {
-        const drive = google.drive({ version: "v3", auth: authClient });
-
-        const fileMetaData = {
-            name: fileName,
-            parents: ["1iNuIxfGmHbqaUwiq8hXe3b8oEQxCUEGv"]
-        };
-
-        const media = {
-            mimeType: 'image/png',
-            body: fs.createReadStream(filePath),
-        };
-
-        drive.files.create({
-            resource: fileMetaData,
-            media: media,
-            fields: 'id'
-        }, (err, file) => {
-            if (err) {
-                return reject(err);
-            }
-            resolve(file);
-        });
-    });
-}
 
 const createProduct = async (req, res) => {
     try {
-        const { name, description, price, stock, categories, image } = req.body;
+        const { name, description, price, stock, categories } = req.body;
+        const file = req.file;  // Usar para o upload da imagem
 
-        const uuid = uuidv4();
-
-        const matches = image.match(/^data:(image\/\w+);base64,/);
-        if (!matches) {
-            throw new Error('Invalid image format');
+        if (!file) {
+            return res.status(400).json({ message: 'Nenhuma imagem enviada.' });
         }
-        const mimeType = matches[1];
-        const extension = mimeType.split('/')[1];
-        const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
 
-        const buffer = Buffer.from(base64Data, 'base64');
+        const uuid = uuidv4();  // Gerar um UUID único para a imagem
 
-        const tempFilePath = path.join(__dirname, `../../../uploads/${uuid}.${extension}`);
+        // Criar uma referência ao Firebase Storage para o upload
+        const storageRef = ref(storage, `images/${uuid}-${file.originalname}`);
 
-        fs.writeFileSync(tempFilePath, buffer);
+        // Fazer o upload da imagem para o Firebase Storage
+        await uploadBytes(storageRef, file.buffer, {
+            contentType: file.mimetype,
+        });
 
-        const authClient = await authorize();
-        const file = await uploadFile(authClient, tempFilePath, `${uuid}.${extension}`);
+        // Obter a URL de download público da imagem
+        const imageUrl = await getDownloadURL(storageRef);
 
-        fs.unlinkSync(tempFilePath);
-
+        // Criar o produto no banco de dados, associando a imagem
         const product = await productService.createProduct({
             name,
             description,
@@ -77,28 +34,27 @@ const createProduct = async (req, res) => {
             categories: categories || [],
             image: {
                 uuid: uuid,
-                link: `https://docs.google.com/uc?id=${file.data.id}`
+                link: imageUrl,
             }
         });
 
         res.status(201).json(product);
     } catch (error) {
-        console.error("Error creating product:", error.message);
+        console.error("Erro ao criar o produto:", error.message);
         res.status(500).json({
-            error: "An error occurred while creating the product.",
+            error: "Ocorreu um erro ao criar o produto.",
         });
     }
 };
-  
 
 const getProducts = async (req, res) => {
     try {
         const products = await productService.getAllProducts();
         res.json(products);
     } catch (error) {
-        console.error("Error getting products:", error.message);
+        console.error("Erro ao obter produtos:", error.message);
         res.status(500).json({
-            error: "An error occurred while retrieving products.",
+            error: "Ocorreu um erro ao obter os produtos.",
         });
     }
 };
@@ -107,6 +63,7 @@ const updateProduct = async (req, res) => {
     try {
         const { id } = req.params;
         const { name, description, price, stock, categories } = req.body;
+
         const product = await productService.updateProduct({
             id,
             name,
@@ -115,14 +72,15 @@ const updateProduct = async (req, res) => {
             stock,
             categories: categories || [],
         });
+
         res.json(product);
     } catch (error) {
-        console.error("Error updating product:", error.message);
+        console.error("Erro ao atualizar o produto:", error.message);
         if (error.message.includes("not found")) {
-            res.status(404).json({ error: "Product not found." });
+            res.status(404).json({ error: "Produto não encontrado." });
         } else {
             res.status(500).json({
-                error: "An error occurred while updating the product.",
+                error: "Ocorreu um erro ao atualizar o produto.",
             });
         }
     }
@@ -134,9 +92,9 @@ const deleteProduct = async (req, res) => {
         const product = await productService.deleteProduct({ id });
         res.json(product ? true : false);
     } catch (error) {
-        console.error("Error deleting product:", error.message);
+        console.error("Erro ao excluir o produto:", error.message);
         res.status(500).json({
-            error: "An error occurred while deleting the product.",
+            error: "Ocorreu um erro ao excluir o produto.",
         });
     }
 };
