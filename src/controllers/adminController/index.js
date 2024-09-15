@@ -3,6 +3,19 @@ const bcrypt = require("bcrypt");
 const { generateToken } = require("../../utils/jwt");
 const prisma = require("../../prisma");
 
+const validateAdminToken = async (req, res) => {
+    const { token } = req.body;
+
+    console.log(token)
+  
+    try {
+      const admin = await adminService.validateToken(token);
+      res.json({ message: "Token is valid", admin });
+    } catch (error) {
+      res.status(401).json({ message: error.message });
+    }
+  };
+
 const getAdmins = async (req, res) => {
     try {
         const admins = await adminService.getAllAdmins();
@@ -97,6 +110,7 @@ const deleteAdmin = async (req, res) => {
 };
 
 module.exports = {
+    validateAdminToken,
     getAdmins,
     createAdmin,
     updateAdmin,
