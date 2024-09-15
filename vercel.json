@@ -9,7 +9,7 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "build/server.js",
+      "dest": "/api/app.js",
       "methods": ["GET", "POST", "OPTIONS"],
       "headers": {
         "Access-Control-Allow-Origin": "*"
