@@ -7,7 +7,8 @@
     "start": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "prisma:generate": "prisma generate --schema=src/prisma/schema.prisma",
-    "prisma:migrate": "prisma migrate dev --schema=src/prisma/schema.prisma"
+    "prisma:migrate": "prisma migrate dev --schema=src/prisma/schema.prisma",
+    "build": "npm install && npm run prisma:generate && npm run prisma:migrate && npm start"
   },
   "keywords": [],
   "author": "",
