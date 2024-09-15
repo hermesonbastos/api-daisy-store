@@ -6,7 +6,7 @@ const { promisify } = require('util');
 const path = require('path');
 const os = require('os');
 
-const serviceAccount = require("../../utils/daisy-store-12555-firebase-adminsdk-pa804-f011e7615e.json");
+const serviceAccount = require("../../../etc/secrets/daisy-store-12555-firebase-adminsdk-pa804-f011e7615e.json");
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
