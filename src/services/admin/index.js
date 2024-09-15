@@ -1,4 +1,23 @@
 const prisma = require('../../prisma');
+const { verifyToken } = require('../../utils/jwt');
+
+const validateToken = async (token) => {
+  try {
+    const decoded = verifyToken(token);
+    
+    const admin = await prisma.admin.findUnique({
+      where: { id: decoded.id },
+    });
+
+    if (!admin) {
+      throw new Error("Admin not found.");
+    }
+
+    return admin;
+  } catch (error) {
+    throw new Error("Invalid token.");
+  }
+};
 
 const getAllAdmins = async () => {
   return await prisma.admin.findMany();
@@ -35,6 +54,7 @@ const findAdminByEmail = async (email) => {
 };
 
 module.exports = {
+  validateToken,
   getAllAdmins,
   createAdmin,
   updateAdmin,

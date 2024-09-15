@@ -1,131 +1,186 @@
-const fs = require('fs');
-const path = require('path');
 const { v4: uuidv4 } = require('uuid');
-const { google } = require('googleapis');
 const productService = require("../../services/product");
-const apikeys = require('../../../apikey.json');
-const SCOPE = ["https://www.googleapis.com/auth/drive"];
+const fs = require('fs');
+const admin = require('firebase-admin');
+const { promisify } = require('util');
+const path = require('path');
+const os = require('os');
 
-async function authorize() {
-    const jwtClient = new google.auth.JWT(
-        apikeys.client_email,
-        null,
-        apikeys.private_key,
-        SCOPE
-    );
-    await jwtClient.authorize();
-    return jwtClient;
-}
+const serviceAccount = require("../../utils/daisy-store-12555-firebase-adminsdk-pa804-f011e7615e.json");
 
-async function uploadFile(authClient, filePath, fileName) {
-    return new Promise((resolve, reject) => {
-        const drive = google.drive({ version: "v3", auth: authClient });
-
-        const fileMetaData = {
-            name: fileName,
-            parents: ["1iNuIxfGmHbqaUwiq8hXe3b8oEQxCUEGv"]
-        };
-
-        const media = {
-            mimeType: 'image/png',
-            body: fs.createReadStream(filePath),
-        };
-
-        drive.files.create({
-            resource: fileMetaData,
-            media: media,
-            fields: 'id'
-        }, (err, file) => {
-            if (err) {
-                return reject(err);
-            }
-            resolve(file);
-        });
-    });
-}
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  storageBucket: "daisy-store-12555.appspot.com",
+});
 
 const createProduct = async (req, res) => {
-    try {
-        const { name, description, price, stock, categories, image } = req.body;
+  try {
+    const { name, description, price, stock, categories } = req.body;
+    const file = req.file;
 
-        const uuid = uuidv4();
-
-        const matches = image.match(/^data:(image\/\w+);base64,/);
-        if (!matches) {
-            throw new Error('Invalid image format');
-        }
-        const mimeType = matches[1];
-        const extension = mimeType.split('/')[1];
-        const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
-
-        const buffer = Buffer.from(base64Data, 'base64');
-
-        const tempFilePath = path.join(__dirname, `../../../uploads/${uuid}.${extension}`);
-
-        fs.writeFileSync(tempFilePath, buffer);
-
-        const authClient = await authorize();
-        const file = await uploadFile(authClient, tempFilePath, `${uuid}.${extension}`);
-
-        fs.unlinkSync(tempFilePath);
-
-        const product = await productService.createProduct({
-            name,
-            description,
-            price,
-            stock,
-            categories: categories || [],
-            image: {
-                uuid: uuid,
-                link: `https://docs.google.com/uc?id=${file.data.id}`
-            }
-        });
-
-        res.status(201).json(product);
-    } catch (error) {
-        console.error("Error creating product:", error.message);
-        res.status(500).json({
-            error: "An error occurred while creating the product.",
-        });
+    if (!file) {
+      return res.status(400).json({ message: 'Nenhuma imagem enviada.' });
     }
+
+    const uuid = uuidv4();
+    const bucket = admin.storage().bucket();
+    const filePath = `${uuid}-${file.originalname}`;
+    
+    try {
+      const tempFilePath = path.join(os.tmpdir(), filePath);
+
+      await promisify(fs.writeFile)(tempFilePath, file.buffer);
+
+      await bucket.upload(tempFilePath, {
+        destination: filePath,
+        metadata: {
+          contentType: file.mimetype,
+        },
+      });
+
+      const [metadata] = await bucket.file(filePath).getMetadata();
+      const imageUrl = `https://firebasestorage.googleapis.com/v0/b/${metadata.bucket}/o/${encodeURIComponent(filePath)}?alt=media`;
+
+      await promisify(fs.unlink)(tempFilePath);
+
+      const parsedCategories = Array.isArray(categories) ? categories : JSON.parse(categories || '[]');
+
+      const product = await productService.createProduct({
+        name,
+        description,
+        price: parseFloat(price),
+        stock: parseInt(stock, 10),
+        categories: parsedCategories,
+        image: {
+          uuid: uuid,
+          link: imageUrl,
+        },
+      });
+
+      res.status(201).json(product);
+    } catch (uploadError) {
+      console.error("Error uploading image:", uploadError.message);
+      return res.status(500).json({
+        error: "Ocorreu um erro ao fazer o upload da imagem.",
+      });
+    }
+  } catch (error) {
+    console.error("Erro ao criar o produto:", error.message);
+    res.status(500).json({
+      error: "Ocorreu um erro ao criar o produto.",
+    });
+  }
 };
-  
+
 
 const getProducts = async (req, res) => {
     try {
         const products = await productService.getAllProducts();
         res.json(products);
     } catch (error) {
-        console.error("Error getting products:", error.message);
+        console.error("Erro ao obter produtos:", error.message);
         res.status(500).json({
-            error: "An error occurred while retrieving products.",
+            error: "Ocorreu um erro ao obter os produtos.",
         });
     }
 };
 
 const updateProduct = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { name, description, price, stock, categories } = req.body;
-        const product = await productService.updateProduct({
-            id,
-            name,
-            description,
-            price,
-            stock,
-            categories: categories || [],
-        });
-        res.json(product);
-    } catch (error) {
-        console.error("Error updating product:", error.message);
-        if (error.message.includes("not found")) {
-            res.status(404).json({ error: "Product not found." });
-        } else {
-            res.status(500).json({
-                error: "An error occurred while updating the product.",
-            });
-        }
+  try {
+    const { id } = req.params;
+    const { name, description, price, stock, categories } = req.body;
+    const file = req.file;
+
+    const existingProduct = await productService.detailProduct(id);
+    
+    if (!existingProduct) {
+      return res.status(404).json({ message: "Produto não encontrado." });
     }
+
+    let updatedFields = {
+      id,
+      name,
+      description,
+      price: parseFloat(price),
+      stock: parseInt(stock, 10),
+      categories: categories ? JSON.parse(categories) : [],
+    };
+
+    if (file) {
+      const uuid = uuidv4();
+      const bucket = admin.storage().bucket();
+      const filePath = `${uuid}-${file.originalname}`;
+
+      if (existingProduct.images && existingProduct.images.length > 0) {
+        const oldImage = existingProduct.images[0].image; 
+        if (oldImage && oldImage.link) {
+          const oldFileName = decodeURIComponent(oldImage.link.split("/o/")[1].split("?")[0]);
+
+          await bucket.file(oldFileName).delete();
+          console.log("Imagem antiga excluída:", oldFileName);
+        }
+      }
+
+      try {
+        const tempFilePath = path.join(os.tmpdir(), filePath);
+
+        await promisify(fs.writeFile)(tempFilePath, file.buffer);
+
+        await bucket.upload(tempFilePath, {
+          destination: filePath,
+          metadata: {
+            contentType: file.mimetype,
+          },
+        });
+
+        const [metadata] = await bucket.file(filePath).getMetadata();
+        const imageUrl = `https://firebasestorage.googleapis.com/v0/b/${metadata.bucket}/o/${encodeURIComponent(filePath)}?alt=media`;
+
+        await promisify(fs.unlink)(tempFilePath);
+
+        updatedFields.image = {
+          uuid: uuid,
+          link: imageUrl,
+        };
+
+      } catch (uploadError) {
+        console.error("Erro ao fazer o upload da nova imagem:", uploadError.message);
+        return res.status(500).json({
+          error: "Ocorreu um erro ao fazer o upload da imagem.",
+        });
+      }
+    }
+
+    const updatedProduct = await productService.updateProduct(updatedFields);
+
+    res.json(updatedProduct);
+  } catch (error) {
+    console.error("Erro ao atualizar o produto:", error.message);
+    if (error.message.includes("not found")) {
+      res.status(404).json({ error: "Produto não encontrado." });
+    } else {
+      res.status(500).json({
+        error: "Ocorreu um erro ao atualizar o produto.",
+      });
+    }
+  }
+};
+
+
+const detailProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const product = await productService.detailProduct(id);
+
+    if (!product) {
+      return res.status(404).json({ message: "Produto não encontrado." });
+    }
+
+    res.json(product);
+  } catch (error) {
+    console.error("Erro ao obter o produto:", error.message);
+    res.status(500).json({ error: "Ocorreu um erro ao obter o produto." });
+  }
 };
 
 const deleteProduct = async (req, res) => {
@@ -134,9 +189,9 @@ const deleteProduct = async (req, res) => {
         const product = await productService.deleteProduct({ id });
         res.json(product ? true : false);
     } catch (error) {
-        console.error("Error deleting product:", error.message);
+        console.error("Erro ao excluir o produto:", error.message);
         res.status(500).json({
-            error: "An error occurred while deleting the product.",
+            error: "Ocorreu um erro ao excluir o produto.",
         });
     }
 };
@@ -145,5 +200,6 @@ module.exports = {
     getProducts,
     createProduct,
     updateProduct,
+    detailProduct,
     deleteProduct,
 };

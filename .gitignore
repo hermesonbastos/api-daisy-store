@@ -2,3 +2,7 @@ node_modules
 # Keep environment variables out of version control
 .env
 apikey.json
+src/config
+src/utils/firebase.js
+uploads
+src/utils/daisy-store-12555-firebase-adminsdk-pa804-f011e7615e.json
