@@ -8,14 +8,15 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "prisma:generate": "prisma generate --schema=src/prisma/schema.prisma",
     "prisma:migrate": "prisma migrate dev --schema=src/prisma/schema.prisma",
-    "build": "npx prisma db push && npx prisma generate && next build"
+    "build": "npx prisma db push && npx prisma generate && next build",
+    "postinstall": "prisma generate"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "nodemon": "^3.1.4",
-    "prisma": "^5.17.0"
+    "prisma": "^5.19.1"
   },
   "dependencies": {
     "@prisma/client": "^5.17.0",
