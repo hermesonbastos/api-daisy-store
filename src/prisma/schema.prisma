@@ -70,10 +70,11 @@ model product_category {
 model product_order {
   product    Product  @relation(fields: [productId], references: [id])
   productId  Int
-  order   Order @relation(fields: [orderId], references: [id])
-  orderId Int
+  order      Order    @relation(fields: [orderId], references: [id])
+  orderId    Int
   assignedAt DateTime @default(now())
   assignedBy String
+  quantity   Int?
 
   @@id([productId, orderId])
 }

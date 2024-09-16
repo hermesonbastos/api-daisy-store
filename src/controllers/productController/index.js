@@ -6,7 +6,7 @@ const { promisify } = require('util');
 const path = require('path');
 const os = require('os');
 
-const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+const serviceAccount = require("../../utils/daisy-store-12555-firebase-adminsdk-pa804-f011e7615e.json");
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -166,7 +166,6 @@ const updateProduct = async (req, res) => {
   }
 };
 
-
 const detailProduct = async (req, res) => {
   try {
     const { id } = req.params;
@@ -180,6 +179,26 @@ const detailProduct = async (req, res) => {
   } catch (error) {
     console.error("Erro ao obter o produto:", error.message);
     res.status(500).json({ error: "Ocorreu um erro ao obter o produto." });
+  }
+};
+
+const updateProductStock = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { stock } = req.body;
+
+    if (stock === undefined) {
+      return res.status(400).json({ message: 'O parâmetro "stock" é obrigatório.' });
+    }
+
+    const updatedProduct = await productService.updateProductStock(id, stock);
+
+    res.json(updatedProduct);
+  } catch (error) {
+    console.error("Erro ao atualizar o estoque do produto:", error.message);
+    res.status(500).json({
+      error: "Ocorreu um erro ao atualizar o estoque do produto.",
+    });
   }
 };
 
@@ -202,4 +221,5 @@ module.exports = {
     updateProduct,
     detailProduct,
     deleteProduct,
+    updateProductStock
 };

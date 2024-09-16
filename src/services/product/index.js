@@ -7,6 +7,11 @@ const getAllProducts = async () => {
         include: {
           image: true,
         }
+      },
+      categories: {
+        include: {
+          category: true,
+        }
       }
     }
   });
@@ -47,18 +52,36 @@ const createProduct = async (data) => {
   });
 };
 
+const updateProductStock = async (id, stock) => {
+  return await prisma.product.update({
+    where: { id: Number(id) },
+    data: { stock: parseInt(stock, 10) },
+    include: {
+      categories: true,
+      images: true,
+    },
+  });
+};
+
+
 const updateProduct = async (data) => {
+  const categoriesData = Array.isArray(data.categories) && data.categories.length > 0
+    ? data.categories.map((categoryId) => ({
+        category: { connect: { id: Number(categoryId) } },
+        assignedBy: "system",
+      }))
+    : [];
+
   const updateData = {
     name: data.name,
     description: data.description,
     price: parseFloat(data.price),
     stock: parseInt(data.stock, 10),
-    categories: {
+    categories: categoriesData.length > 0 ? {
       deleteMany: {},
-      create: data.categories.map((categoryId) => ({
-        category: { connect: { id: Number(categoryId) } },
-        assignedBy: "system",
-      })),
+      create: categoriesData,
+    } : {
+      deleteMany: {},
     },
   };
 
@@ -88,12 +111,15 @@ const updateProduct = async (data) => {
   });
 };
 
-
 const detailProduct = async (id) => {
   return await prisma.product.findUnique({
     where: { id: Number(id) },
     include: {
-      categories: true,
+      categories: {
+        include: {
+          category: true,
+        }
+      },
       images: {
         include: {
           image: true,
@@ -116,5 +142,6 @@ module.exports = {
   createProduct,
   updateProduct,
   detailProduct,
-  deleteProduct
+  deleteProduct,
+  updateProductStock
 }

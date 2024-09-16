@@ -12,7 +12,26 @@ const getCategories = async (req, res) => {
     }
 };
 
+const detailCategory = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const category = await categoryService.getCategoryById(id);
+
+        if (!category) {
+            return res.status(404).json({ message: "Categoria não encontrada." });
+        }
+
+        res.json(category);
+    } catch (error) {
+        console.error("Error getting category details:", error.message);
+        res.status(500).json({
+            error: "An error occurred while retrieving the category details.",
+        });
+    }
+};
+
 const createCategory = async (req, res) => {
+    console.log(req.body)
     try {
         const { name, description } = req.body;
         const category = await categoryService.createCategory({
@@ -31,12 +50,15 @@ const createCategory = async (req, res) => {
 const updateCategory = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, description } = req.body;
+        const { name, description, productIds } = req.body;
+
         const category = await categoryService.updateCategory({
             id,
             name,
             description,
+            productIds,
         });
+
         res.json(category);
     } catch (error) {
         console.error("Error updating category:", error.message);
@@ -64,6 +86,7 @@ const deleteCategory = async (req, res) => {
 };
 
 module.exports = {
+    detailCategory,
     getCategories,
     createCategory,
     updateCategory,

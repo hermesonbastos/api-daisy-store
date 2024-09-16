@@ -5,4 +5,4 @@ apikey.json
 src/config
 src/utils/firebase.js
 uploads
-etc/secrets/daisy-store-12555-firebase-adminsdk-pa804-f011e7615e.json
+src/utils/daisy-store-12555-firebase-adminsdk-pa804-f011e7615e.json
